@@ -1,0 +1,437 @@
+#Remove previous objects stored in R environment & Create working directory
+
+rm(list=ls(all=TRUE))
+setwd("C:/Users/Deepali Yelisetty/Desktop/Fleet Management")
+
+### install.packages("lubridate")
+
+library(lubridate)
+
+fleetdata<-read.table("FleetManagement.csv", header = TRUE, sep = ",")
+
+
+class("FLStartTime" )
+class("CLReachTime")
+class("CustLeftTime") 
+class("FLReachTime")
+
+##Converting from 12HR AM:PM format to 24 HR HH:MM format
+
+
+fleetdata$FLStartTime<-substr(strptime(fleetdata$FLStartTime, "%I:%M %p"),11,19)
+fleetdata$CLReachTime<-substr(strptime(fleetdata$CLReachTime, "%I:%M %p"),11,19)
+fleetdata$CustLeftTime<-substr(strptime(fleetdata$CustLeftTime, "%I:%M %p"),11,19)
+fleetdata$FLReachTime<-substr(strptime(fleetdata$FLReachTime, "%I:%M %p"),11,19)
+
+fleetdata$MM<-formatC(fleetdata$MM, width = 2) 
+fleetdata$DD<-formatC(fleetdata$DD, width = 2)
+
+fleetdata$Date <- as.character(paste(fleetdata$YY, fleetdata$MM,
+                                     fleetdata$DD, sep = "-"))
+
+
+fleetdata<-fleetdata[,-(2:4)]
+
+
+
+fleetdata$Date.FLStartTime <- as.character(paste(fleetdata$Date,
+                                                 fleetdata$FLStartTime
+                                                 , sep = " "))
+
+
+fleetdata$Date.FLReachTime <- as.character(paste(fleetdata$Date,
+                                                 fleetdata$FLReachTime
+                                                 , sep = " "))
+
+
+fleetdata$Date.CustLeftTime <- as.character(paste(fleetdata$Date,
+                                                  fleetdata$CustLeftTime
+                                                  , sep = " "))
+
+
+fleetdata$Date.CLReachTime<- as.character(paste(fleetdata$Date,
+                                                fleetdata$CLReachTime
+                                                , sep = " "))
+class("FLStartTime" )
+class("CLReachTime")
+class("CustLeftTime") 
+class("FLReachTime")
+
+head(fleetdata$Date.FLReachTime)
+
+fleetdata<-fleetdata[,-(8:11)]
+fleetdata$TimetoCust<-difftime(fleetdata$Date.CLReachTime,fleetdata$Date.FLStartTime,units="hours")
+fleetdata$TimeatCust<-difftime(fleetdata$Date.CustLeftTime,fleetdata$Date.CLReachTime,units="hours")
+fleetdata$TimetoFL<-difftime(fleetdata$Date.FLReachTime,fleetdata$Date.CustLeftTime,units="hours")
+
+class("TimetoCust")
+
+
+
+
+
+fleetdata$TimetoCust<-as.numeric(fleetdata$TimetoCust)
+fleetdata$TimeatCust<-as.numeric(fleetdata$TimeatCust)
+fleetdata$TimetoFL<-as.numeric(fleetdata$TimetoFL)
+
+summary(fleetdata)
+
+
+
+write.csv(fleetdata, "preprocessfleet.csv")
+
+
+fleet<-fleetdata[,c(1:11,17:19)]
+write.csv(fleet,"fleet.csv")
+rm(fleetdata)
+
+summary(fleet)
+
+
+# Plotting histograms in r
+hist(fleet$QtyTons)
+hist(fleet$KM)
+hist(fleet$TimetoCust)
+hist(fleet$TimeatCust)
+hist(fleet$TimetoFL)
+
+
+# Plotting simple barchart in R
+ 
+customer <- table(fleet$Customer.ID)
+barplot(customer, main="count", 
+        xlab="Customer$ID")
+
+
+driver<- table(fleet$Driver.ID)
+driver
+barplot(driver, main="count", 
+        xlab="Driver$ID")
+
+
+
+# Boxplot of WasteType by QtyTons 
+boxplot(QtyTons~WasteType,data=fleet, main="Waste type by Qty in Tons", 
+        xlab="QtyTons", ylab="WasteType")
+
+
+
+
+####Using table command to evaluate multiple variables
+
+
+driver.waste <- table(fleet$Driver.ID,fleet$WasteType)
+driver.waste
+
+
+customer.waste.<-table(fleet$Customer.ID,fleet$WasteType)
+customer.waste.
+
+
+
+###Binning numeric variable in R ###
+library(car)
+
+
+fleet$QtyTons1<-cut(fleet$QtyTons,breaks=10)
+fleet$KM1<-cut(fleet$KM,breaks=10)
+
+
+## Used recode in Deducer to recode Customer ID and WAsteType###
+library(Deducer)
+JGR()
+
+####fleet11[c("WasteType")] <- recode.variables(fleet11[c("WasteType")] ,
+"'W-TYP007' -> 'W-TYP007';
+'W-TYP008' -> 'W-TYP008';
+'W-TYP012' -> 'W-TYP012';
+'W-TYP018' -> 'W-TYP018';
+'W-TYP021' -> 'W-TYP021';
+else -> 'Others';")
+
+
+#### fleet11[c("Customer.ID.Bin")] <- recode.variables(fleet11[c("Customer.ID")] ,
+"'C00ID106' -> 'C00ID106';
+'C00ID009' -> 'C00ID009';
+'C00ID039' -> 'C00ID039';
+'C00ID019' -> 'C00ID019';
+'C00ID047' -> 'C00ID047';
+'C00ID084' -> 'C00ID084';
+'C00ID058' -> 'C00ID058';
+'C00ID048' -> 'C00ID048';
+'C00ID053' -> 'C00ID053';
+'C00ID015' -> 'C00ID015';
+'C00ID066' -> 'C00ID066';
+'C00ID049' -> 'C00ID049';
+else -> 'Others';")
+
+
+
+######---Plotting done in DEducer-----------###
+
+########### Aggregate command ----------------------------
+library(VIM)
+library(stats)
+
+rm(counts,customer,customer.waste.,driver,driver.waste)
+
+
+FLtoCLt<-fleet[,c(3:6,8:12)]
+
+### ?? Why does the covariance matrix work work in deducer but not in R
+
+library(som)
+
+
+cor(normalize(FLtoCLt[7:9],byrow=TRUE), use="complete.obs")
+
+
+
+
+#####Sorting command#####
+
+FLtoCLt<-FLtoCLt[with(FLtoCLt, order(FLtoCLt$KM, FLtoCLt$WasteType,FLtoCLt$QtyTons,
+                                     FLtoCLt$Driver.ID, FLtoCLt$VehicleID)), ]
+
+
+####Aggregate comnmand###
+FLtoCLtmed<-aggregate(FLtoCLt$TimetoCust, list(FLtoCLt$KM, FLtoCLt$WasteType, FLtoCLt$QtyTons,
+                                                FLtoCLt$Driver.ID, FLtoCLt$VehicleID, 
+                                                FLtoCLt$Vehicle.Type, FLtoCLt$Make, 
+                                                FLtoCLt$Model ), FUN=median)
+
+colnames(FLtoCLtmed) <- c("KM", "WasteType","QtyTons","Driver.ID","VehicleID","Vehicle.Type","Make",
+                          "Model","TimetoCust")
+
+
+
+
+####################################################3
+#we use set.seed to ensure that you get same results
+#every time you run the experiment. Seperating the data into test and train data
+
+rows<-seq(1:1126)
+set.seed(11)
+trainRows=sample(rows,1000)
+testRows<-rows[-(trainRows)]
+
+
+train = FLtoCLtmed[trainRows,] 
+test=FLtoCLtmed[testRows,]
+
+
+summary(train)
+summary(test)
+
+
+head(train)
+summary(train)
+attach(train)
+
+#### Build a linear model using R, 
+mylm<-lm(TimetoCust ~ KM+WasteType+QtyTons+Driver.ID+VehicleID+Vehicle.Type+Make+Model, 
+          data = train)
+summary(mylm)
+
+plot(mylm)
+
+
+##### Predicting Time to Cust using the lm
+
+
+
+predlm <- predict(mylm, 
+                newdata = test[,-9], 
+                type = "response")
+
+test<-cbind(test,predlm)
+
+### Plotted using excel plot(test$pred~test$x)
+install.packages("hydroGOF")
+library(hydroGOF)
+library(arules)
+Errorlm<-mse(sim=test$predlm, obs=test$TimetoCust)
+Errorlm
+write.csv(test,"test.csv")
+
+
+
+### Build model 2 with Naive Bayes
+
+library(e1071)
+
+trainnb<-train
+trainnb$TimetoCust<-cut(trainnb$TimetoCust,breaks=c(0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25),
+                        label=c(0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0))
+
+model <- naiveBayes(trainnb$TimetoCust ~ ., data = trainnb, laplace = 3)
+model$apriori
+
+testnb<-test[,-(10:11)]
+testnb$TimetoCustbin<-cut(testnb$TimetoCust,breaks=c(0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25),
+                                               label=c(0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0))
+prednB <- predict(model, testnb[,-(9:10)])
+testnb<-cbind(testnb,prednB)
+class(testnb$prednB)
+
+testnb[,11]<-as.numeric(levels(testnb[,11])[testnb[,11]])
+
+
+
+Errornb<-mse(sim=testnb$prednB, obs=test$TimetoCust)
+Errornb
+write.csv(testnb,"testnb.csv")
+
+### Build model 3 with Random Forest
+install.package("randomForest")
+library(randomForest)
+trainrf<-
+  rf <- randomForest(TimetoCust ~ .,   data=train)
+print(rf) # view results 
+importance(rf) # importance of each predictor
+
+###see one Tree in RF
+getTree(rf,500 , labelVar=TRUE)
+
+
+
+testrf<-test[,-(10:11)]
+b<-predict(rf,newdata=testrf[,-(9)], 
+                type="class")
+
+testrf<-cbind(testrf,b)
+
+Errorrf<-mse(sim=testrf$b, obs=testrf$TimetoCust)
+Errorrf
+write.csv(testrf,"testrf.csv")
+
+plot(randomForest(TimetoCust ~ ., train, keep.forest=FALSE, ntree=100), log="y")
+
+
+
+
+### Build model 4 with Decision Trees
+library(party)
+library(C50)
+trainc50<-train
+trainc50$TimetoCust<-cut(trainc50$TimetoCust,breaks=c(0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25),
+                         label=c(0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0))
+                         
+dtC50= C5.0(trainc50$TimetoCust ~ ., 
+            data = trainc50, 
+            rules=TRUE)
+summary(dtC50)
+C5imp(dtC50, pct=TRUE)
+
+## Plotting trees having issues at this because trees plotted using plot and prp command
+### are not clear
+library(rpart)
+tree.1 <- rpart(dtC50,data=trainc50,control=rpart.control(minsplit=20,cp=0))
+
+
+library(rpart.plot)
+library(rattle)
+prp(tree.1)
+fancyRpartPlot(tree.1)
+###install.package(RevoscaleR) ## cannot be installed for R version 2.15.3
+###library(RevoScaleR)
+### Next 3 commands do not work 
+rx.tree <- rxDTree(form, data = trainc50,maxNumBins = 100,
+                   minBucket = 10,maxDepth = 5,cp = 0.01, xVal = 0)
+prp(rxAddInheritance(rx.tree))
+fancyRpartPlot(rxAddInheritance(rx.tree))
+
+
+testc50<-test[,-(10:11)]
+testc50$TimetoCustBin<-cut(testc50$TimetoCust,breaks=c(0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75,4.25,4.75,5.25),
+                        label=c(0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0))
+                        
+a=predict(dtC50, 
+          newdata=testc50[,-(9:10)], 
+          type="class")
+
+testc50<-cbind(testc50,a)
+
+testc50[,11]<-as.numeric(levels(testc50[,11])[testc50[,11]])
+
+Errorc50<-mse(sim=testc50$a, obs=testc50$TimetoCust)
+Errorc50
+
+write.csv(testc50,"testc50.csv")
+
+#### Building Longitudinal Model for Predicting time #####
+
+fleetdata<-read.table("preprocessfleet.csv", header = TRUE, sep = ",")
+fleetdata<-fleetdata[,c(3:13,18)]
+
+modelrf<-predict(rf,newdata=fleetdata[,c(10,8,9,7,2:5)],na.action=na.omit, 
+                 type="class")
+fleetdata<-cbind(fleetdata,modelrf)
+fleetdata<-fleetdata[with(fleetdata, order(fleetdata$Customer.ID)), ]
+fleetdata<-fleetdata[5:17,]
+
+fleetdata<-fleetdata[with(fleetdata,order(fleetdata$Date)),]
+
+
+
+
+fleetdata$Avg_TimetoCust<-0
+fleetdata$StdDev_TimetoCust<-0
+fleetdata$Pred_Time<-0
+fleetdata$Error<-0
+
+fleetdata
+
+aggregate(fleetdata, by = list(fleetdata$cusID), funcLong)
+
+head(fleetdata)
+for(i in 1:nrow(fleetdata))
+{
+  if(i==1){
+    fleetdata$Avg_TimetoCust[i]<-NA
+    fleetdata$StdDev_TimetoCust[i]<-NA
+    fleetdata$Pred_Time[i]<-fleetdata$modelrf[i]
+    fleetdata$Error[i]<-abs(fleetdata$Pred_Time[i]-fleetdata$TimetoCust[i])
+  }
+  if(i==2)
+  {
+    fleetdata$Avg_TimetoCust[i]<-fleetdata$TimetoCust[i-1]
+    fleetdata$StdDev_TimetoCust[i]<-NA
+    fleetdata$Pred_Time[i]<-fleetdata$modelrf[i]*0.25+fleetdata$TimetoCust[i-1]*0.75
+    fleetdata$Error[i]<-(abs(fleetdata$Pred_Time[i]-fleetdata$TimetoCust[i])*100/fleetdata$TimetoCust[i])
+  }
+  
+  if(i==3)
+  {
+    fleetdata$Avg_TimetoCust[i]<-mean(fleetdata$TimetoCust[1:i-1])
+    fleetdata$StdDev_TimetoCust[i]<-sd(fleetdata$TimetoCust[1:i-1])
+    fleetdata$Pred_Time[i]<-fleetdata$modelrf[i]*0.25+(mean(fleetdata$TimetoCust[1:i-1])*0.75)
+    fleetdata$Error[i]<-(abs(fleetdata$Pred_Time[i]-fleetdata$TimetoCust[i])*100/fleetdata$TimetoCust[i])
+  }
+  
+  if(i>3)
+  {
+    fleetdata$Avg_TimetoCust[i]<-mean(fleetdata$TimetoCust[1:i-1])
+    fleetdata$StdDev_TimetoCust[i]<-sd(fleetdata$TimetoCust[1:i-1])
+    lm<-lm(TimetoCust~ modelrf + Avg_TimetoCust + StdDev_TimetoCust ,data=fleetdata[1:i-1,])
+    fleetdata$Pred_Time[i]<-predict(lm,fleetdata[i,c(13:15)])
+    fleetdata$Error[i]<-(abs(fleetdata$Pred_Time[i]-fleetdata$TimetoCust[i])*100/fleetdata$TimetoCust[i])
+  }
+}
+
+
+
+
+
+
+### Still working on everything below this line
+##########Aggregate counts using plyr ddply#######################
+
+library(plyr)
+FltoCLtCount<- ddply(FLtoCLt, .(FLtoCLt$Customer.ID, FLtoCLt$KM, FLtoCLt$WasteType,
+                                FLtoCLt$Driver.ID, FLtoCLt$VehicleID), summarise)
+#####--------------------------------------------------------
+
+### rbi <- ddply(baseball, .(year), summarise,
+####             mean_rbi = mean(rbi, na.rm = TRUE))
+
