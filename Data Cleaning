@@ -1,0 +1,207 @@
+
+# seting libpaths
+.libPaths("/Users/GADDAAN1/Desktop/R-3.0.1")
+
+# setting working directory
+setwd("/Users/GADDAAN1/Desktop/fleet managment")
+getwd()
+
+rm(list=(ls(all=TRUE)))
+
+# reading the fleet management data set 
+
+fleet.M <- read.table('FleetManagement.csv',header=T,sep=",")
+
+
+fleet.M$FLStartTime <- as.character(paste(fleet.M$FLStartTime,
+                                               ""
+                                               , sep = ""))
+fleet.M$CLReachTime <- as.character(paste(fleet.M$CLReachTime,
+                                          ""
+                                          , sep = ""))
+fleet.M$CLLeftTime <- as.character(paste(fleet.M$CustLeftTime,
+                                          ""
+                                          , sep = ""))
+fleet.M$FLReachTime <- as.character(paste(fleet.M$FLReachTime,
+                                         ""
+                                         , sep = ""))
+
+fleet.M$FLStartTime
+fleet.M$CLReachTime
+fleet.M$CLLeftTime
+fleet.M$FLReachTime
+
+
+FLStartTime  FLReachTime	CLReachTime	
+
+#FLStart.Time conversion to minutes
+
+class(fleet.M$FLStartTime)
+
+x <- strsplit(fleet.M$FLStartTime," ",2)
+
+
+f3 <- function(x) {
+  for(i in 1:length(x))
+  {
+    y <- unlist(x[i])
+    z <- unlist(strsplit(y[1], split = ":"))
+    w <- as.numeric(z)
+    if(y[2]=="AM") 
+      fleet.M$FLStartTime.min[i] <- w[1]*60 + w[2] 
+    
+    else
+    
+      fleet.M$FLStartTime.min[i] <- (w[1] + 12)*60 + w[2] 
+  
+  }
+  return(fleet.M$FLStartTime.min)
+}
+mode(fleet.M$FLStartTime.min)
+
+fleet.M$FLStartTime.min <- f3(x)
+
+
+# clreachtime in minutes
+
+class(fleet.M$CLReachTime)
+
+x <- strsplit(fleet.M$CLReachTime," ",2)
+
+
+f3 <- function(x) {
+  for(i in 1:length(x))
+  {
+    y <- unlist(x[i])
+    z <- unlist(strsplit(y[1], split = ":"))
+    w <- as.numeric(z)
+    if(y[2]=="AM") 
+      fleet.M$CLReachTime.min[i] <- w[1]*60 + w[2] 
+    
+    else
+      
+      fleet.M$CLReachTime.min[i] <- (w[1] + 12)*60 + w[2] 
+    
+  }
+  return(fleet.M$CLReachTime.min)
+}
+mode(fleet.M$CLReachTime.min)
+
+fleet.M$CLReachTime.min <- f3(x)
+
+#clstarttime in minutes
+
+class(fleet.M$CLLeftTime)
+
+x <- strsplit(fleet.M$CLLeftTime," ",2)
+
+
+f3 <- function(x) {
+  for(i in 1:length(x))
+  {
+    y <- unlist(x[i])
+    z <- unlist(strsplit(y[1], split = ":"))
+    w <- as.numeric(z)
+    if(y[2]=="AM") 
+      fleet.M$CLLeftTime.min[i] <- w[1]*60 + w[2] 
+    
+    else
+      
+      fleet.M$CLLeftTime.min[i] <- (w[1] + 12)*60 + w[2] 
+    
+  }
+  return(fleet.M$CLLeftTime.min)
+}
+
+mode(fleet.M$CLLeftTime.min)
+
+fleet.M$CLLeftTime.min <- f3(x)
+
+# flreachtime in minutes
+
+class(fleet.M$FLReachTime)
+
+x <- strsplit(fleet.M$FLReachTime," ",2)
+
+
+f3 <- function(x) {
+  for(i in 1:length(x))
+  {
+    y <- unlist(x[i])
+    z <- unlist(strsplit(y[1], split = ":"))
+    w <- as.numeric(z)
+    if(y[2]=="AM") 
+      fleet.M$FLReachTime.min[i] <- w[1]*60 + w[2] 
+    
+    else
+      
+      fleet.M$FLReachTime.min[i] <- (w[1] + 12)*60 + w[2] 
+    
+  }
+  return(fleet.M$FLReachTime.min)
+}
+mode(fleet.M$FLReachTime.min)
+
+fleet.M$FLReachTime.min <- f3(x)
+
+
+fleet.M$t1 <- fleet.M$CLReachTime.min - fleet.M$FLStartTime.min
+fleet.M$t2 <- fleet.M$CLLeftTime.min  - fleet.M$CLReachTime.min 
+fleet.M$t3 <- fleet.M$FLReachTime.min - fleet.M$CLLeftTime.min
+
+
+# write the preprocessed data set
+write.csv(fleet.M, "preprocess.csv")
+
+class("FLStartTime" )
+class("CLReachTime")
+class("CLLeftTime") 
+class("FLReachTime")
+
+
+
+
+
+pre <- read.table('preprocess.csv',header=T,sep=",")
+#Dividing data in training and testing 
+train=sample(1:1127,800)
+train_data=pre[train,]
+dim(train_data)
+test=(1:1127)[-train]
+test_data=pre[test,]
+dim(train_data)
+
+summary(pre)
+
+install.packages("sqldf")
+library(sqldf)
+library(e1071)
+
+presub <- sqldf(" select WasteType , QtyTons,  t1 from train_data")
+presub$t1 <- as.factor(presub$t1) 
+presub$t1
+classifier<-naiveBayes(presub[,1:2], presub[,3]) 
+
+A_predicted <- predict(classifier, presub)
+
+table(predict(classifier, presub[,-3]), presub[,3])
+
+install.packages("gmodels")
+library(gmodels)
+
+> CrossTable(A_predicted, pre$t1,
+             prop.chisq = FALSE, prop.t = FALSE,
+             dnn = c('predicted', 'actual'))
+
+
+
+
+
+
+
+
+
+
+
+
+
